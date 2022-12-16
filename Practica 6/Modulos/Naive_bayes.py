@@ -1,18 +1,17 @@
+import numpy as np
+import pandas as pd
+
 import os
 
-import pandas as pd
-import numpy as np
-
-import matplotlib.pyplot as plt
-
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix
 
 from tabulate import tabulate
 
-exa = list()
+exactitud = list()
+
 
 def preprocesamiento(X, columna= int()):
     """
@@ -30,18 +29,26 @@ def preprocesamiento(X, columna= int()):
     for i in X[str(columns_names[n])]:
         g = i.split(' ')
         id_bueno.append(g[1])
+
     X[str(columns_names[n])].replace(X[str(columns_names[n])].values,id_bueno, inplace = True)
 
     return X
 
-def clasificador_multinomial(X, y, i, emails = False):
-    clf = MultinomialNB()
-    clf.fit(X, y.values.ravel())
+def calcula_gaussian(x, y, i, emails = False):
+    """
+    Funcion para crear el modelo y entrenarlo a partir de los datos de entrenamiento, retorna los datos predichos.
+    x : Valores de x de entrenamiento
+    y : Valores de y de entrenamiento
+    """
+    clf = GaussianNB()
+    clf.fit(x, y.values.ravel())
+        
+    y_predict = clf.predict(x)
 
-    y_predict = clf.predict(X)
-    exa.append(accuracy_score(y, y_predict))
+    exactitud.append(accuracy_score(y, y_predict))
+
+
     print (accuracy_score(y, y_predict, normalize=False))
-
     labels = []
     if emails:
         target_names = ['Yes', 'No']
@@ -49,21 +56,20 @@ def clasificador_multinomial(X, y, i, emails = False):
     else:
         target_names = clf.classes_
         labels = target_names
-        
+
     print(classification_report(y, y_predict, target_names=target_names))
-    cm = confusion_matrix(y, y_predict, labels=labels)
-    print (cm)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=target_names)
-    disp.plot()
-    plt.show()
+    print (confusion_matrix(y, y_predict, labels=labels))
 
     print(f'Pliegue {i+1}, terminado')
-#     return exactitud
     
-def inicia_multi(path, pre = False, emails = False):
+def inicializa_gaus(path = str(), pre = False, emails = False):
+    """
+    Función que a partir del directorio otorgado, genera dos listas con los nombres de los archivos de entrenamiento, tanto para x, como y.
+    Regresa una lista con el porcentaje de exactitud de cada pliegue
+    path : string, dirección, de preferencia dinamica, donde se encuentran los pliegues, previamente generados.
+    """
+    
     # Creación de archivos para x, y
-    exactitud = list()
-    
     name_files = os.listdir(path)
     data_train = list(filter(lambda x: x.startswith('data_validation_train'), name_files))
     target_train = list(filter(lambda x: x.startswith('target_validation_train'), name_files))
@@ -73,8 +79,9 @@ def inicia_multi(path, pre = False, emails = False):
         if pre:
             x = preprocesamiento(x, 1)
         y = pd.read_csv(path + target_train[i])
-        clasificador_multinomial(x, y, i, emails)
-    exactitud = exa
+        
+        calcula_gaussian(x, y, i, emails)  
+        
     return exactitud
 
 def calcula_promedio(exc = list()):
@@ -85,15 +92,15 @@ def calcula_promedio(exc = list()):
     lista = np.array(exc)
     return np.sum(lista) / n
 
-def multinomial_vs_test(path, pre = False, emails = False):
+def kpliegues_vs_test(path, pre = False, emails = False):
     """
     path : directorio donde se encuentran los pliegues previamente generados.
     test : valores de y sin dividir en pliegues
     """
-    
+
     x = pd.read_csv(path + 'Xtest.csv')
     y = pd.read_csv(path + 'ytest.csv')
-    
+
     if pre:
         x = preprocesamiento(x, 1)
         for i, v in enumerate(y):
@@ -101,22 +108,21 @@ def multinomial_vs_test(path, pre = False, emails = False):
                 y[i] = 'No'
             elif v == 1:
                 y[i] = 'Yes'
-                
     
-    clasificador_multinomial(x, y, 0, emails)
-        
-    return exa
+    calcula_gaussian(x, y, 0, emails)
+
+    return exactitud
 
 def get_tableau(datasetName = str(), inicio = int(), n = int()):
     """
     Función para mostrar en pantalla la tabla requerida en las evidencias.
     path : directorio donde se encuentran los k pliegues.
     """
-    promedio = calcula_promedio(exa[:n])
-    k_vs_t = calcula_promedio(exa[n: n+2])
-#     print('promedio:',promedio,'\npliegues vs test:', k_vs_t)
+    promedio = calcula_promedio(exactitud[inicio:n])
+    k_vs_t = calcula_promedio(exactitud[n: n+2])
+#     print('Promedio:', promedio, '\npliegues vs test', k_vs_t)
     
     vec = []
-    vec.append([datasetName, str('multinomial'), str(promedio), str(k_vs_t)])
+    vec.append([datasetName, str('Naive Bayes'), str(promedio), str(k_vs_t)])
     
     print(tabulate(vec,headers=['Dataset','Clasificador', 'Exactitud, promedio de los tres pliegues', 'Exactitud obtenida pliegues vs test'],tablefmt="grid", numalign="center"))

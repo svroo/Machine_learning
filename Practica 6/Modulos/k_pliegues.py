@@ -1,12 +1,8 @@
-# from practica de k pliegues
-from sklearn.model_selection import KFold
-import numpy as np
-import sys
-import pickle
 import csv
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
 
 class validation_set:
     def __init__(self, X_train, y_train, X_test, y_test):
@@ -60,6 +56,9 @@ def pliegues_validacion(file_name, pliegues, folder, test_size, mezcla, random_s
     #Separa corpus en conjunto de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, shuffle = mezcla, random_state=random_st)
 
+    X_test.to_csv(folder + 'Xtest.csv', index = False)
+    y_test.to_csv(folder + 'ytest.csv', index = False)
+
     validation_sets = []
 
     # Número de pliegues
@@ -76,7 +75,7 @@ def pliegues_validacion(file_name, pliegues, folder, test_size, mezcla, random_s
         validation_sets.append(validation_set(X_train_v, y_train_v, X_test_v, y_test_v))
 
         #Almacena el conjunto de prueba
-        my_test_set = test_set(X_test, y_test)	
+        my_test_set = test_set(X_test, y_test)
 
         #Guarda el dataset con los pliegues del conjunto de validación y el conjunto de pruebas
         my_data_set = data_set(validation_sets, my_test_set)
